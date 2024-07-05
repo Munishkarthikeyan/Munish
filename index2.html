@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>File Search Engine</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .search-form {
+            max-width: 600px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .search-input {
+            width: calc(100% - 120px);
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+        .search-btn {
+            width: 100px;
+            padding: 10px;
+            font-size: 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .result {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>File Search Engine</h1>
+    <div class="search-form">
+        <input type="search" id="searchInput" class="search-input" placeholder="Enter search term...">
+        <input type="file" id="fileInput" accept=".xlsx, .xls" onchange="handleFileSelect(event)">
+        <button type="button" onclick="searchFiles()" class="search-btn">Search</button>
+    </div>
+    <div id="searchResults" class="result">
+        <!-- Results will be displayed here -->
+    </div>
+
+    <script>
+        var selectedFile;
+
+        function handleFileSelect(event) {
+            selectedFile = event.target.files[0];
+        }
+
+        function searchFiles() {
+            var searchTerm = document.getElementById('searchInput').value.trim().toLowerCase();
+
+            if (!selectedFile) {
+                alert('Please select a file.');
+                return;
+            }
+
+            var reader = new FileReader();
+            reader.onload = function(event) {
+                var data = event.target.result;
+                var workbook = XLSX.read(data, { type: 'binary' });
+
+                var sheetName = workbook.SheetNames[0];
+                var sheet = workbook.Sheets[sheetName];
+
+                var fileContent = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+
+                var results = performSearch(fileContent, searchTerm);
+
+                displayResults(results);
+            };
+
+            reader.onerror = function(event) {
+                console.error('File could not be read! Code ' + event.target.error.code);
+            };
+
+            reader.readAsBinaryString(selectedFile);
+        }
+
+        function performSearch(fileContent, searchTerm) {
+            var results = [];
+
+            fileContent.forEach(function(row, rowIndex) {
+                row.forEach(function(cell, cellIndex) {
+                    if (cell && cell.toString().toLowerCase().includes(searchTerm)) {
+                        results.push({
+                            row: rowIndex + 1,
+                            column: cellIndex + 1,
+                            value: cell.toString()
+                        });
+                    }
+                });
+            });
+
+            return results;
+        }
+
+        function displayResults(results) {
+            var searchResults = document.getElementById('searchResults');
+            searchResults.innerHTML = '';
+
+            if (results.length === 0) {
+                searchResults.innerHTML = '<p>No results found.</p>';
+            } else {
+                results.forEach(function(result) {
+                    var resultItem = document.createElement('div');
+                    resultItem.innerHTML = '<p>Found in Row ' + result.row + ', Column ' + result.column + ': ' + result.value + '</p>';
+                    searchResults.appendChild(resultItem);
+                });
+            }
+        }
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.4/xlsx.full.min.js"></script>
+</body>
+</html>
